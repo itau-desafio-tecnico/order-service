@@ -1,0 +1,39 @@
+# Arquivos Python compilados
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Ambientes virtuais
+.venv/
+venv/
+ENV/
+env/
+
+# Variáveis de ambiente
+.env
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs
+*.log
+
+# Downloads temporários
+downloads/
+
+# AWS
+.aws/
+
+# Pytest
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Distribuição
+dist/
+build/
+*.egg-info/
