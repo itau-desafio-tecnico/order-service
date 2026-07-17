@@ -1,0 +1,54 @@
+databaseChangeLog:
+  - changeSet:
+      id: 001-create-orders-table
+      author: desafio-tecnico
+      changes:
+        - createTable:
+            tableName: orders
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: order_number
+                  type: varchar(30)
+                  constraints:
+                    nullable: false
+                    unique: true
+                    uniqueConstraintName: uk_orders_order_number
+              - column:
+                  name: idempotency_key
+                  type: varchar(255)
+                  constraints:
+                    nullable: false
+                    unique: true
+                    uniqueConstraintName: uk_orders_idempotency_key
+              - column:
+                  name: requester_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+              - column:
+                  name: description
+                  type: varchar(1000)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: status
+                  type: varchar(30)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_at
+                  type: timestamp with time zone
+                  constraints:
+                    nullable: false
+        - createIndex:
+            indexName: idx_orders_requester_id
+            tableName: orders
+            columns:
+              - column:
+                  name: requester_id

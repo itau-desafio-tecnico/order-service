@@ -1,0 +1,62 @@
+databaseChangeLog:
+  - changeSet:
+      id: 002-create-outbox-events-table
+      author: desafio-tecnico
+      changes:
+        - createTable:
+            tableName: outbox_events
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: aggregate_type
+                  type: varchar(50)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: aggregate_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+              - column:
+                  name: event_type
+                  type: varchar(50)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: payload
+                  type: jsonb
+                  constraints:
+                    nullable: false
+              - column:
+                  name: status
+                  type: varchar(20)
+                  defaultValue: PENDING
+                  constraints:
+                    nullable: false
+              - column:
+                  name: attempts
+                  type: int
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+              - column:
+                  name: create_at
+                  type: timestamp with time zone
+                  constraints:
+                    nullable: false
+              - column:
+                  name: published_at
+                  type: timestamp with time zone
+                  constraints:
+                    nullable: true
+        - createIndex:
+            indexName: idx_outbox_events_status
+            tableName: outbox_events
+            columns:
+              - column:
+                  name: status
