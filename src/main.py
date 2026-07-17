@@ -13,7 +13,14 @@ from src.interfaces.api.routers.orders import router as orders_router
 from src.interfaces.api.error_handlers import register_exception_handlers
 
 
-logging.basicConfig(level=logging.INFO)
+LOG_FORMAT = "%(asctime)s | %(name)s | %(levelname)s | %(message)s"
+
+logging.basicConfig(level=logging.INFO, format=LOG_FORMAT)
+
+_formatter = logging.Formatter(LOG_FORMAT)
+for _uvicorn_logger_name in ("uvicorn", "uvicorn.access", "uvicorn.error"):
+    for _handler in logging.getLogger(_uvicorn_logger_name).handlers:
+        _handler.setFormatter(_formatter)
 
 
 class HealthCheckFilter(logging.Filter):
