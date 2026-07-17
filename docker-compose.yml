@@ -1,0 +1,47 @@
+version: "3.9"
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: orders
+      POSTGRES_USER: order
+      POSTGRES_PASSWORD: order
+    ports:
+      - "5433:5432"
+    volumes:
+      - order_db_data:/var/lib/postgresql/data
+
+  liquibase:
+    image: liquibase/liquibase:4.29
+    depends_on:
+      - postgres
+    volumes:
+      - ./db/changelog:/liquibase/changelog
+    command: >
+      --url=jdbc:postgresql://postgres:5432/orders
+      --username=order
+      --password=order
+      --changelog-file=changelog/db.changelog-master.yaml
+      update
+
+  order-service:
+    build: .
+    depends_on:
+      - postgres
+      - liquibase
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: orders
+      DB_USER: order
+      DB_PASSWORD: order
+      REQUESTER_SERVICE_URL: http://requester-service:8081
+      AWS_REGION: sa-east-1
+      OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: http://otel-collector:4318/v1/traces
+      OTEL_EXPORTER_OTLP_METRICS_ENDPOINT: http://otel-collector:4318/v1/metrics
+    ports:
+      - "8000:8000"
+
+volumes:
+  order_db_data:
