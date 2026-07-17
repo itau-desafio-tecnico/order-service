@@ -13,7 +13,7 @@ class Settings(BaseSettings):
     db_user: str = "postgres"
     db_password: str = "postgres"
 
-    requester_service_url: str = "http://localhost:8001"
+    requester_service_url: str = "http://localhost:8001/jv-requester-service"
     requester_timeout_seconds: float = 3.0
 
     sns_topic_arn: str = "arn:aws:sns:sa-east-1:000000000000:order-created"
@@ -21,6 +21,10 @@ class Settings(BaseSettings):
 
     outbox_poll_interval_seconds: float = 2.0
     outbox_max_attempts: int = 5
+
+    otel_service_name: str = "order-service"
+    otel_exporter_otlp_traces_endpoint: str = "http://localhost:4318/v1/traces"
+    otel_exporter_otlp_metrics_endpoint: str = "http://localhost:4318/v1/metrics"
 
     @property
     def database_url(self) -> str:

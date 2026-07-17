@@ -22,12 +22,14 @@ class OutboxDispatcher:
         self._running = False
 
     async def start(self) -> None:
+        logger.info("Starting outbox dispatcher poll_interval=%s max_attempts=%s", self._poll_interval, self._max_attempts)
         self._running = True
         while self._running:
             await self._dispatch_once()
             await asyncio.sleep(self._poll_interval)
 
     def stop(self) -> None:
+        logger.info("Stopping outbox dispatcher")
         self._running = False
 
     async def _dispatch_once(self) -> None:
@@ -36,6 +38,7 @@ class OutboxDispatcher:
             try:
                 self._event_publisher.publish(event)
                 self._outbox_repository.mark_as_published(event.id)
+                logger.info("Published outbox event id=%s event_type=%s", event.id, event.event_type)
             except Exception:
                 logger.exception("Fail to publish outbox event id=%s", event.id)
                 self._outbox_repository.fail_registry(event.id, max_attempts=self._max_attempts)

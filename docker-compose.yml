@@ -36,7 +36,7 @@ services:
       DB_NAME: orders
       DB_USER: order
       DB_PASSWORD: order
-      REQUESTER_SERVICE_URL: http://requester-service:8081
+      REQUESTER_SERVICE_URL: http://requester-service:8081/jv-requester-service
       AWS_REGION: sa-east-1
       OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: http://otel-collector:4318/v1/traces
       OTEL_EXPORTER_OTLP_METRICS_ENDPOINT: http://otel-collector:4318/v1/metrics

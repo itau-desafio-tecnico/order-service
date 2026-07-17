@@ -1,8 +1,12 @@
+import logging
+
 from fastapi import APIRouter, Header, status, Depends
 
 from src.interfaces.api.schemas import CreateOrderRequest, OrderResponse
 from src.app.create_order_use_case import CreateOrderUseCase
 from src.interfaces.api.dependencies import get_create_order_use_case
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/orders", tags=["orders"])
 
@@ -25,9 +29,11 @@ def create_order(
     Returns:
         OrderResponse: The response containing the created order details.
     """
+    logger.info("Received order creation request idempotency_key=%s requester_id=%s", idempotency_key, request.requester_id)
     order = use_case.execute(
         idempotency_key=idempotency_key,
         requester_id=request.requester_id,
         description=request.description
     )
+    logger.info("Order processed order_id=%s status=%s", order.id, order.status)
     return OrderResponse.from_domain(order)
