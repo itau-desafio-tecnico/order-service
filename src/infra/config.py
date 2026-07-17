@@ -22,6 +22,10 @@ class Settings(BaseSettings):
     outbox_poll_interval_seconds: float = 2.0
     outbox_max_attempts: int = 5
 
+    otel_service_name: str = "order-service"
+    otel_exporter_otlp_traces_endpoint: str = "http://localhost:4318/v1/traces"
+    otel_exporter_otlp_metrics_endpoint: str = "http://localhost:4318/v1/metrics"
+
     @property
     def database_url(self) -> str:
         return (

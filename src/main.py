@@ -9,6 +9,7 @@ from src.infra.db.outbox_repository import SqlAlchemyOutboxRepository
 from src.infra.db.session import SessionLocal
 from src.infra.message.outbox_dispatcher import OutboxDispatcher
 from src.infra.message.sns_publisher import SnsEventPublisher
+from src.infra.telemetry import setup_telemetry
 from src.interfaces.api.routers.orders import router as orders_router
 from src.interfaces.api.error_handlers import register_exception_handlers
 
@@ -60,6 +61,7 @@ app = FastAPI(
     lifespan=lifespan
 )
 
+setup_telemetry(app)
 register_exception_handlers(app)
 
 _root_router = APIRouter(prefix=_prefix)
