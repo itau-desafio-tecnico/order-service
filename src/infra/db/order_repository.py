@@ -1,8 +1,10 @@
+from datetime import timezone
+
 from sqlalchemy.exc import IntegrityError
 
-from domain.entities import Order, OrderStatus, OutboxEvent
-from domain.ports import OrderRepository
-from infra.db.models import OrderModel, OutboxEventModel
+from src.domain.entities import Order, OrderStatus, OutboxEvent
+from src.domain.ports import OrderRepository
+from src.infra.db.models import OrderModel, OutboxEventModel
 
 
 class SqlAlchemyOrderRepository(OrderRepository):
@@ -51,6 +53,9 @@ class SqlAlchemyOrderRepository(OrderRepository):
     
     @staticmethod
     def _to_domain(model: OrderModel) -> Order:
+        created_at = model.created_at
+        if created_at.tzinfo is None:
+            created_at = created_at.replace(tzinfo=timezone.utc)
         return Order(
             id=model.id,
             order_number=model.order_number,
@@ -58,7 +63,7 @@ class SqlAlchemyOrderRepository(OrderRepository):
             requester_id=model.requester_id,
             description=model.description,
             status=OrderStatus(model.status),
-            created_at=model.created_at
+            created_at=created_at
         )
 
     @staticmethod

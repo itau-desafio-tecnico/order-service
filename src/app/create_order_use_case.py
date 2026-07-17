@@ -1,8 +1,8 @@
 from uuid import UUID
 
-from domain.entities import Order, OutboxEvent
-from domain.exceptions import RequesterNotFoundError
-from domain.ports import OrderRepository, RequesterClient
+from src.domain.entities import Order, OutboxEvent
+from src.domain.exceptions import RequesterNotFoundError
+from src.domain.ports import OrderRepository, RequesterClient
 
 
 class CreateOrderUseCase:

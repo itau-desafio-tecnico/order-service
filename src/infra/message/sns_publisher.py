@@ -2,8 +2,8 @@ import json
 
 import boto3
 
-from domain.entities import OutboxEvent
-from domain.ports import EventPublisher
+from src.domain.entities import OutboxEvent
+from src.domain.ports import EventPublisher
 
 
 class SnsEventPublisher(EventPublisher):

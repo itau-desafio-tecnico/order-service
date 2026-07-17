@@ -4,13 +4,13 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
-from infra.config import get_settings
-from infra.db.outbox_repository import SqlAlchemyOutboxRepository
-from infra.db.session import SessionLocal
-from infra.message.outbox_dispatcher import OutboxDispatcher
-from infra.message.sns_publisher import SnsEventPublisher
-from interfaces.api.routers.orders import router as orders_router
-from interfaces.api.error_handlers import register_exception_handlers
+from src.infra.config import get_settings
+from src.infra.db.outbox_repository import SqlAlchemyOutboxRepository
+from src.infra.db.session import SessionLocal
+from src.infra.message.outbox_dispatcher import OutboxDispatcher
+from src.infra.message.sns_publisher import SnsEventPublisher
+from src.interfaces.api.routers.orders import router as orders_router
+from src.interfaces.api.error_handlers import register_exception_handlers
 
 
 logging.basicConfig(level=logging.INFO)

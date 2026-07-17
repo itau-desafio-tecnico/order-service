@@ -3,7 +3,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, Field
 
-from domain.entities import Order
+from src.domain.entities import Order
 
 class CreateOrderRequest(BaseModel):
     requester_id: UUID = Field(..., description="ID of the requester")

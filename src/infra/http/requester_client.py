@@ -1,8 +1,8 @@
 import httpx
 from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_exponential
 
-from domain.exceptions import RequesterServiceError
-from domain.ports import RequesterClient
+from src.domain.exceptions import RequesterServiceError
+from src.domain.ports import RequesterClient
 
 
 class HttpRequesterClient(RequesterClient):
@@ -22,7 +22,7 @@ class HttpRequesterClient(RequesterClient):
     
     def exists(self, requester_id: str) -> bool:
         try:
-            response = self._get(f"/requester/{requester_id}/validation")
+            response = self._get(f"/requesters/{requester_id}/validation")
         except httpx.TransportError as exc:
             raise RequesterServiceError(str(exc)) from exc
 

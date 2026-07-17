@@ -1,10 +1,10 @@
 from fastapi import Depends
 
-from app.create_order_use_case import CreateOrderUseCase
-from infra.config import get_settings
-from infra.db.order_repository import SqlAlchemyOrderRepository
-from infra.db.session import SessionLocal
-from infra.http.requester_client import HttpRequesterClient
+from src.app.create_order_use_case import CreateOrderUseCase
+from src.infra.config import get_settings
+from src.infra.db.order_repository import SqlAlchemyOrderRepository
+from src.infra.db.session import SessionLocal
+from src.infra.http.requester_client import HttpRequesterClient
 
 
 def get_order_repository() -> SqlAlchemyOrderRepository:

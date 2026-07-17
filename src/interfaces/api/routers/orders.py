@@ -1,8 +1,8 @@
 from fastapi import APIRouter, Header, status, Depends
 
-from interfaces.api.schemas import CreateOrderRequest, OrderResponse
-from app.create_order_use_case import CreateOrderUseCase
-from interfaces.api.dependencies import get_create_order_use_case
+from src.interfaces.api.schemas import CreateOrderRequest, OrderResponse
+from src.app.create_order_use_case import CreateOrderUseCase
+from src.interfaces.api.dependencies import get_create_order_use_case
 
 router = APIRouter(prefix="/orders", tags=["orders"])
 

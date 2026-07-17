@@ -1,9 +1,9 @@
 from datetime import datetime, timezone
 from uuid import UUID
 
-from domain.entities import OutboxEvent, OutboxStatus
-from domain.ports import OutboxRepository
-from infra.db.models import OutboxEventModel
+from src.domain.entities import OutboxEvent, OutboxStatus
+from src.domain.ports import OutboxRepository
+from src.infra.db.models import OutboxEventModel
 
 
 class SqlAlchemyOutboxRepository(OutboxRepository):

@@ -1,7 +1,7 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-from infra.config import get_settings
+from src.infra.config import get_settings
 
 _settings = get_settings()
 

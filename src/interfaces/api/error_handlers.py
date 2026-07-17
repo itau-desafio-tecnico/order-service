@@ -1,7 +1,7 @@
 from fastapi import FastAPI, Request, status
 from fastapi.responses import JSONResponse
 
-from domain.exceptions import RequesterNotFoundError, RequesterServiceError
+from src.domain.exceptions import RequesterNotFoundError, RequesterServiceError
 
 
 def register_exception_handlers(app: FastAPI) -> None:
@@ -9,14 +9,14 @@ def register_exception_handlers(app: FastAPI) -> None:
     @app.exception_handler(RequesterNotFoundError)
     async def handle_requester_not_found(request: Request, exc: RequesterNotFoundError):
         return JSONResponse(
-            status_code=status.HTTP_404_NOT_FOUND,
-            content={"code": "REQUESTER_NOT_FOUND", "message": str(exc)},
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            content={"code": "REQUEST_INVALID", "message": str(exc)},
         )
 
     @app.exception_handler(RequesterServiceError)
     async def handle_requester_service_error(request: Request, exc: RequesterServiceError):
         return JSONResponse(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             content={"code": "REQUESTER_SERVICE_ERROR", "message": str(exc)},
         )
 

@@ -1,7 +1,7 @@
 import asyncio
 import logging
 
-from domain.ports import EventPublisher, OutboxRepository
+from src.domain.ports import EventPublisher, OutboxRepository
 
 logger = logging.getLogger(__name__)
 

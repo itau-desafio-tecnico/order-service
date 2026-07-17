@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from uuid import UUID
 
-from domain.entities import Order, OutboxEvent
+from src.domain.entities import Order, OutboxEvent
 
 class OrderRepository(ABC):
 
