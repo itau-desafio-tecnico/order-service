@@ -1,6 +1,6 @@
 # order-service
 
-Microsserviço de **registro de transações de ordens de serviço**, escrito em **Python 3.12 + FastAPI**. Cria ordens de forma idempotente, valida o solicitante ("requester") junto ao [`requester-service`](../requester-service/README.md) e publica o evento `OrderCreated` de forma confiável através de um **outbox pattern** com envio para o Amazon SNS.
+Microsserviço de **registro de transações de ordens de serviço**, escrito em **Python 3.12 + FastAPI**. Cria ordens de forma idempotente, valida o solicitante ("requester") junto ao [`requester-service`](https://github.com/itau-desafio-tecnico/requester-service/blob/main/README.md) e publica o evento `OrderCreated` de forma confiável através de um **outbox pattern** com envio para o Amazon SNS.
 
 ## Sumário
 
@@ -109,7 +109,7 @@ Prefixo de contexto: **`/py-order-service`**.
 
 ### Dependência externa
 
-- Chama `GET {REQUESTER_SERVICE_URL}/requesters/{requester_id}/validation` no [`requester-service`](../requester-service/README.md) para validar o solicitante antes de criar a ordem.
+- Chama `GET {REQUESTER_SERVICE_URL}/requesters/{requester_id}/validation` no [`requester-service`](https://github.com/itau-desafio-tecnico/requester-service/blob/main/README.md) para validar o solicitante antes de criar a ordem.
 
 ## Configuração
 
@@ -139,7 +139,7 @@ Variáveis de ambiente (ver `src/infra/config.py`):
 docker compose up
 ```
 
-Sobe Postgres (porta host `5433`), roda as migrações do Liquibase automaticamente e inicia o `order-service` em `http://localhost:8000`. Pressupõe que `requester-service` e um `otel-collector` estejam acessíveis pelos hostnames configurados (ex.: em uma rede Docker compartilhada com o [`requester-service`](../requester-service/README.md)).
+Sobe Postgres (porta host `5433`), roda as migrações do Liquibase automaticamente e inicia o `order-service` em `http://localhost:8000`. Pressupõe que `requester-service` e um `otel-collector` estejam acessíveis pelos hostnames configurados (ex.: em uma rede Docker compartilhada com o [`requester-service`](https://github.com/itau-desafio-tecnico/requester-service/blob/main/README.md)).
 
 ### Local (sem Docker)
 
