@@ -6,6 +6,7 @@ from opentelemetry import metrics, trace
 from opentelemetry.exporter.otlp.proto.http.metric_exporter import OTLPMetricExporter
 from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
 from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+from opentelemetry.instrumentation.httpx import HTTPXClientInstrumentor
 from opentelemetry.sdk.metrics import MeterProvider
 from opentelemetry.sdk.metrics.export import PeriodicExportingMetricReader
 from opentelemetry.sdk.resources import Resource
@@ -33,3 +34,8 @@ def setup_telemetry(app: FastAPI) -> None:
     # (http.server.duration etc.) are actually collected and exported, in
     # addition to traces.
     FastAPIInstrumentor.instrument_app(app)
+
+    # Instruments outbound httpx calls (requester-service validation) and
+    # injects the W3C traceparent header, so the downstream span joins this
+    # same trace instead of starting an unrelated one.
+    HTTPXClientInstrumentor().instrument()
