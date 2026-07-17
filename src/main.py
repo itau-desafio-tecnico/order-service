@@ -2,7 +2,7 @@ import asyncio
 import logging
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import APIRouter, FastAPI
 
 from src.infra.config import get_settings
 from src.infra.db.outbox_repository import SqlAlchemyOutboxRepository
@@ -50,18 +50,25 @@ async def lifespan(app: FastAPI):
     task.cancel()
 
 
+_prefix = f"/{_settings.APP_NAME}"
+
 app = FastAPI(
     title=_settings.TITLE,
     version=_settings.VERSION,
-    docs_url=f"/{_settings.APP_NAME}/apidocs",
-    openapi_url=f"/{_settings.APP_NAME}/openapi.json",
+    docs_url=f"{_prefix}/apidocs",
+    openapi_url=f"{_prefix}/openapi.json",
     lifespan=lifespan
 )
 
 register_exception_handlers(app)
-app.include_router(orders_router)
+
+_root_router = APIRouter(prefix=_prefix)
+_root_router.include_router(orders_router)
 
 
-@app.get("/health")
+@_root_router.get("/health")
 def health() -> dict:
     return {"status": "ok"}
+
+
+app.include_router(_root_router)

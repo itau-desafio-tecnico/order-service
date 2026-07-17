@@ -33,7 +33,7 @@ def test_create_order_return_201():
     client = _client_with_use_case(FakeUseCase(result=order))
 
     response = client.post(
-        "/orders",
+        "/py-order-service/orders",
         json={"requester_id": str(order.requester_id), "description": "Description"},
         headers={"Idempotency-Key": "key-1"},
     )
@@ -48,7 +48,7 @@ def test_create_order_without_idempotency_key_returns_422():
     client = TestClient(app)
 
     response = client.post(
-        "/orders",
+        "/py-order-service/orders",
         json={"requester_id": str(uuid4()), "description": "Description"},
     )
 
@@ -59,7 +59,7 @@ def test_create_order_with_empty_description_returns_422():
     client = TestClient(app)
 
     response = client.post(
-        "/orders",
+        "/py-order-service/orders",
         json={"requester_id": str(uuid4()), "description": ""},
         headers={"Idempotency-Key": "key-2"},
     )
@@ -71,7 +71,7 @@ def test_create_order_with_invalid_requester_returns_422_business_error():
     client = _client_with_use_case(FakeUseCase(exception=RequesterNotFoundError(uuid4())))
 
     response = client.post(
-        "/orders",
+        "/py-order-service/orders",
         json={"requester_id": str(uuid4()), "description": "Description"},
         headers={"Idempotency-Key": "key-3"},
     )
@@ -84,7 +84,7 @@ def test_create_order_with_unavailable_requester_returns_503():
     client = _client_with_use_case(FakeUseCase(exception=RequesterServiceError("timeout")))
 
     response = client.post(
-        "/orders",
+        "/py-order-service/orders",
         json={"requester_id": str(uuid4()), "description": "Description"},
         headers={"Idempotency-Key": "key-4"},
     )
@@ -96,7 +96,7 @@ def test_create_order_with_unavailable_requester_returns_503():
 def test_health_endpoint():
     client = TestClient(app)
 
-    response = client.get("/health")
+    response = client.get("/py-order-service/health")
 
     assert response.status_code == 200
     assert response.json() == {"status": "ok"}

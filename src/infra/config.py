@@ -13,7 +13,7 @@ class Settings(BaseSettings):
     db_user: str = "postgres"
     db_password: str = "postgres"
 
-    requester_service_url: str = "http://localhost:8001"
+    requester_service_url: str = "http://localhost:8001/jv-requester-service"
     requester_timeout_seconds: float = 3.0
 
     sns_topic_arn: str = "arn:aws:sns:sa-east-1:000000000000:order-created"
