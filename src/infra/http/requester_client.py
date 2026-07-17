@@ -1,8 +1,12 @@
+import logging
+
 import httpx
 from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_exponential
 
 from src.domain.exceptions import RequesterServiceError
 from src.domain.ports import RequesterClient
+
+logger = logging.getLogger(__name__)
 
 
 class HttpRequesterClient(RequesterClient):
@@ -19,16 +23,20 @@ class HttpRequesterClient(RequesterClient):
     def _get(self, path: str) -> httpx.Response:
         with httpx.Client(timeout=self._timeout) as client:
             return client.get(f"{self._base_url}{path}")
-    
+
     def exists(self, requester_id: str) -> bool:
+        logger.info("Calling requester-service to validate requester_id=%s", requester_id)
         try:
             response = self._get(f"/requesters/{requester_id}/validation")
         except httpx.TransportError as exc:
+            logger.error("Failed to reach requester-service requester_id=%s: %s", requester_id, exc)
             raise RequesterServiceError(str(exc)) from exc
 
         if response.status_code == 404:
+            logger.info("Requester not found requester_id=%s", requester_id)
             return False
         if response.status_code >= 500:
+            logger.error("requester-service returned status=%s requester_id=%s", response.status_code, requester_id)
             raise RequesterServiceError(f"status={response.status_code}")
 
         response.raise_for_status()
