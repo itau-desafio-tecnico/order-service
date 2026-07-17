@@ -1,8 +1,8 @@
 from sqlalchemy.exc import IntegrityError
 
-from domain.entities import Order, OrderStatus
+from domain.entities import Order, OrderStatus, OutboxEvent
 from domain.ports import OrderRepository
-from infra.db.models import OrderModel
+from infra.db.models import OrderModel, OutboxEventModel
 
 
 class SqlAlchemyOrderRepository(OrderRepository):
@@ -18,10 +18,11 @@ class SqlAlchemyOrderRepository(OrderRepository):
             )
             return self._to_domain(model) if model else None
     
-    def save(self, order: Order) -> Order:
+    def save_with_outbox(self, order: Order, outbox_event: OutboxEvent) -> Order:
         with self._session_factory() as session:
             try:
                 session.add(self._order_to_model(order))
+                session.add(self._event_to_model(outbox_event))
                 session.commit()
                 return order
             except IntegrityError:
@@ -58,4 +59,17 @@ class SqlAlchemyOrderRepository(OrderRepository):
             description=model.description,
             status=OrderStatus(model.status),
             created_at=model.created_at
+        )
+
+    @staticmethod
+    def _event_to_model(event: OutboxEvent) -> OutboxEventModel:
+        return OutboxEventModel(
+            id=event.id,
+            aggregate_type=event.aggregate_type,
+            aggregate_id=event.aggregate_id,
+            event_type=event.event_type,
+            payload=event.payload,
+            status=event.status.value,
+            attempts=event.attempts,
+            create_at=event.create_at,
         )

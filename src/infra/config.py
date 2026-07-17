@@ -16,6 +16,12 @@ class Settings(BaseSettings):
     requester_service_url: str = "http://localhost:8001"
     requester_timeout_seconds: float = 3.0
 
+    sns_topic_arn: str = "arn:aws:sns:sa-east-1:000000000000:order-created"
+    aws_region: str = "sa-east-1"
+
+    outbox_poll_interval_seconds: float = 2.0
+    outbox_max_attempts: int = 5
+
     @property
     def database_url(self) -> str:
         return (

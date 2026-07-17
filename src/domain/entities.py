@@ -38,3 +38,41 @@ class Order:
             status=OrderStatus.CREATED,
             created_at=now
         )
+
+class OutboxStatus(str, Enum):
+    PENDING = "PENDING"
+    PUBLISHED = "PUBLISHED"
+    FAILED = "FAILED"
+
+
+@dataclass(frozen=True)
+class OutboxEvent:
+    id: UUID
+    aggregate_type: str
+    aggregate_id: UUID
+    event_type: str
+    payload: dict
+    status: OutboxStatus
+    attempts: int
+    create_at: datetime
+    published_at: datetime | None = None
+
+    @staticmethod
+    def to_create_order(order: Order) -> "OutboxEvent":
+        return OutboxEvent(
+            id=uuid4(),
+            aggregate_type="Order",
+            aggregate_id=order.id,
+            event_type="OrderCreated",
+            payload={
+                "order_id": str(order.id),
+                "order_number": order.order_number,
+                "requester_id": str(order.requester_id),
+                "description": order.description,
+                "status": order.status.value,
+                "created_at": order.created_at.isoformat(),
+            },
+            status=OutboxStatus.PENDING,
+            attempts=0,
+            create_at=datetime.now(timezone.utc),
+        )

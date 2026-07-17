@@ -5,11 +5,32 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 
 from infra.config import get_settings
+from infra.db.outbox_repository import SqlAlchemyOutboxRepository
+from infra.db.session import SessionLocal
+from infra.message.outbox_dispatcher import OutboxDispatcher
+from infra.message.sns_publisher import SnsEventPublisher
 from interfaces.api.routers.orders import router as orders_router
+from interfaces.api.error_handlers import register_exception_handlers
+
 
 logging.basicConfig(level=logging.INFO)
 
 _settings = get_settings()
+
+_dispatcher = OutboxDispatcher(
+    outbox_repository=SqlAlchemyOutboxRepository(SessionLocal),
+    event_publisher=SnsEventPublisher(topic_arn=_settings.sns_topic_arn, region_name=_settings.aws_region),
+    poll_interval=_settings.outbox_poll_interval_seconds,
+    max_attempts=_settings.outbox_max_attempts,
+)
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    task = asyncio.create_task(_dispatcher.start())
+    yield
+    _dispatcher.stop()
+    task.cancel()
 
 
 app = FastAPI(
@@ -17,8 +38,10 @@ app = FastAPI(
     version=_settings.VERSION,
     doc_url=f"/{_settings.APP_NAME}/apidocs",
     openapi_url=f"/{_settings.APP_NAME}/openapi.json",
+    lifespan=lifespan
 )
 
+register_exception_handlers(app)
 app.include_router(orders_router)
 
 
