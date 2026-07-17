@@ -15,6 +15,16 @@ from src.interfaces.api.error_handlers import register_exception_handlers
 
 logging.basicConfig(level=logging.INFO)
 
+
+class HealthCheckFilter(logging.Filter):
+    """Silences uvicorn access log entries for the ALB/ECS health check probe."""
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        return "/health" not in record.getMessage()
+
+
+logging.getLogger("uvicorn.access").addFilter(HealthCheckFilter())
+
 _settings = get_settings()
 
 _dispatcher = OutboxDispatcher(
