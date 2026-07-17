@@ -32,8 +32,9 @@ def setup_telemetry(app: FastAPI) -> None:
 
     # Meter provider must be set BEFORE instrument_app so automatic metrics
     # (http.server.duration etc.) are actually collected and exported, in
-    # addition to traces.
-    FastAPIInstrumentor.instrument_app(app)
+    # addition to traces. excluded_urls keeps the ALB/ECS health check probe
+    # out of both traces and metrics.
+    FastAPIInstrumentor.instrument_app(app, excluded_urls="health")
 
     # Instruments outbound httpx calls (requester-service validation) and
     # injects the W3C traceparent header, so the downstream span joins this
