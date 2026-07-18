@@ -24,12 +24,14 @@ def use_case(order_repository, requester_client):
 
 
 def test_return_order_exists_when_idempotency_key_already_proccessed(use_case, order_repository, requester_client):
-    exists = Order.create("key-123", uuid4(), "Description")
+    requester_id = uuid4()
+    exists = Order.create("key-123", requester_id, "Description")
     order_repository.get_by_idempotency_key.return_value = exists
 
-    result = use_case.execute("key-123", uuid4(), "Description")
+    result = use_case.execute("key-123", requester_id, "Description")
 
     assert result is exists
+    order_repository.get_by_idempotency_key.assert_called_once_with("key-123", requester_id)
     requester_client.exists.assert_not_called()
     order_repository.save_with_outbox.assert_not_called()
 
@@ -56,3 +58,24 @@ def test_reject_order_when_requester_is_invalid(use_case, order_repository, requ
         use_case.execute("key-new", uuid4(), "Description")
 
     order_repository.save_with_outbox.assert_not_called()
+
+
+def test_creates_new_order_when_same_idempotency_key_used_by_different_requester(
+    use_case, order_repository, requester_client
+):
+    """Regressão: a mesma Idempotency-Key usada por dois solicitantes diferentes não
+    pode retornar a ordem do primeiro solicitante para o segundo. A idempotência é
+    escopada por (idempotency_key, requester_id), então o repositório deve receber
+    ambos os valores e, para um requester_id novo, não deve encontrar ordem existente.
+    """
+    other_requester_id = uuid4()
+    order_repository.get_by_idempotency_key.return_value = None
+    requester_client.exists.return_value = True
+    order_repository.save_with_outbox.side_effect = lambda order, evento: order
+
+    result = use_case.execute("key-shared", other_requester_id, "Description")
+
+    order_repository.get_by_idempotency_key.assert_called_once_with("key-shared", other_requester_id)
+    assert result.requester_id == other_requester_id
+    requester_client.exists.assert_called_once_with(other_requester_id)
+    order_repository.save_with_outbox.assert_called_once()

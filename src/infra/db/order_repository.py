@@ -1,4 +1,5 @@
 from datetime import timezone
+from uuid import UUID
 
 from sqlalchemy.exc import IntegrityError
 
@@ -10,12 +11,12 @@ from src.infra.db.models import OrderModel, OutboxEventModel
 class SqlAlchemyOrderRepository(OrderRepository):
     def __init__(self, session_factory):
         self._session_factory = session_factory
-    
-    def get_by_idempotency_key(self, idempotency_key: str) -> Order | None:
+
+    def get_by_idempotency_key(self, idempotency_key: str, requester_id: UUID) -> Order | None:
         with self._session_factory() as session:
             model = (
                 session.query(OrderModel)
-                .filter_by(idempotency_key=idempotency_key)
+                .filter_by(idempotency_key=idempotency_key, requester_id=requester_id)
                 .one_or_none()
             )
             return self._to_domain(model) if model else None
@@ -31,7 +32,7 @@ class SqlAlchemyOrderRepository(OrderRepository):
                 session.rollback()
                 existing_order = (
                     session.query(OrderModel)
-                    .filter_by(idempotency_key=order.idempotency_key)
+                    .filter_by(idempotency_key=order.idempotency_key, requester_id=order.requester_id)
                     .one_or_none()
                 )
                 if existing_order is not None:

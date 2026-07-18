@@ -20,7 +20,7 @@ O `order-service` é responsável por registrar **ordens de serviço**. Cada ord
 
 Principais garantias de negócio:
 
-- **Idempotência**: requisições de criação repetidas com o mesmo `Idempotency-Key` retornam a ordem já existente, sem revalidar o solicitante nem publicar um novo evento.
+- **Idempotência**: requisições de criação repetidas com o mesmo par `Idempotency-Key` + `requester_id` retornam a ordem já existente, sem revalidar o solicitante nem publicar um novo evento. A mesma chave usada por solicitantes diferentes gera ordens distintas — a chave de idempotência é escopada por solicitante, nunca global.
 - **Consistência**: a ordem e o evento de outbox são persistidos na mesma transação de banco de dados — o evento nunca é perdido mesmo que a publicação no SNS falhe.
 - **Entrega confiável**: um dispatcher em background publica os eventos pendentes no SNS com retry e contagem de tentativas, marcando o evento como `FAILED` após esgotar as tentativas.
 
@@ -76,12 +76,12 @@ A direção de dependência aponta sempre para dentro (`infra`/`interfaces` → 
 ### Criação de ordem (síncrono, via HTTP)
 
 1. Cliente chama `POST /py-order-service/orders` com header `Idempotency-Key` e corpo `{requester_id, description}`.
-2. `CreateOrderUseCase` verifica se já existe uma ordem para essa chave de idempotência — se existir, retorna a ordem existente imediatamente (sem revalidar o solicitante nem gerar novo evento).
+2. `CreateOrderUseCase` verifica se já existe uma ordem para o par `(idempotency_key, requester_id)` — se existir, retorna a ordem existente imediatamente (sem revalidar o solicitante nem gerar novo evento). A mesma `Idempotency-Key` usada por um `requester_id` diferente **não** é tratada como repetição — gera uma nova ordem normalmente.
 3. Caso contrário, valida o solicitante chamando `GET {REQUESTER_SERVICE_URL}/requesters/{id}/validation` no `requester-service`, com até 3 tentativas e backoff exponencial em caso de erro de transporte.
    - Solicitante inexistente/inativo → `422 Unprocessable Entity`.
    - `requester-service` indisponível (5xx) → `503 Service Unavailable`.
 4. Se válido, cria a `Order` (gera UUID e `order_number` no formato `OS-YYYYMMDD--XXXXXX`) e o `OutboxEvent` correspondente (`OrderCreated`).
-5. Persiste **ordem e evento de outbox na mesma transação** de banco (transactional outbox pattern). Em caso de corrida (chave de idempotência duplicada concorrente), faz rollback e retorna a ordem já existente.
+5. Persiste **ordem e evento de outbox na mesma transação** de banco (transactional outbox pattern). Em caso de corrida (mesmo par `idempotency_key` + `requester_id` duplicado concorrentemente), faz rollback e retorna a ordem já existente. A unicidade é garantida no banco por uma constraint composta em `(idempotency_key, requester_id)`, não pela chave isolada.
 6. Responde `201 Created` com os dados da ordem criada.
 
 ### Despacho assíncrono do outbox (background task)

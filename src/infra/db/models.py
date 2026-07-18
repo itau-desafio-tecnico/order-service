@@ -1,7 +1,7 @@
 from datetime import datetime
 from uuid import UUID
 
-from sqlalchemy import JSON, DateTime, Integer, String
+from sqlalchemy import JSON, DateTime, Integer, String, UniqueConstraint
 from sqlalchemy import Uuid as SAUuid
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
@@ -10,10 +10,13 @@ class Base(DeclarativeBase):
 
 class OrderModel(Base):
     __tablename__ = "orders"
+    __table_args__ = (
+        UniqueConstraint("idempotency_key", "requester_id", name="uk_orders_idempotency_key_requester_id"),
+    )
 
     id: Mapped[UUID] = mapped_column(SAUuid(as_uuid=True), primary_key=True)
     order_number: Mapped[str] = mapped_column(String(30), unique=True, nullable=False)
-    idempotency_key: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
+    idempotency_key: Mapped[str] = mapped_column(String(255), nullable=False)
     requester_id: Mapped[UUID] = mapped_column(SAUuid(as_uuid=True), nullable=False)
     description: Mapped[str] = mapped_column(String(1000), nullable=False)
     status: Mapped[str] = mapped_column(String(30), nullable=False)
