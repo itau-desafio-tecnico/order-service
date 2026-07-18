@@ -6,7 +6,7 @@ from src.domain.entities import Order, OutboxEvent
 class OrderRepository(ABC):
 
     @abstractmethod
-    def get_by_idempotency_key(self, idempotency_key: str) -> Order | None:
+    def get_by_idempotency_key(self, idempotency_key: str, requester_id: UUID) -> Order | None:
         ...
     
     @abstractmethod

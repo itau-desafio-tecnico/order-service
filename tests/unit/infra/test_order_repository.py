@@ -24,14 +24,14 @@ def test_save_with_outbox_persists_order_and_allows_lookup_by_idempotency_key(se
     save = repo.save_with_outbox(order, event)
 
     assert save == order
-    find = repo.get_by_idempotency_key("key-1")
+    find = repo.get_by_idempotency_key("key-1", order.requester_id)
     assert find == order
 
 
 def test_get_by_idempotency_key_returns_none_when_not_found(session_factory):
     repo = SqlAlchemyOrderRepository(session_factory)
 
-    assert repo.get_by_idempotency_key("not_existent") is None
+    assert repo.get_by_idempotency_key("not_existent", uuid4()) is None
 
 
 def test_save_with_outbox_handles_concurrent_requests_with_same_idempotency_key(session_factory):
@@ -45,3 +45,24 @@ def test_save_with_outbox_handles_concurrent_requests_with_same_idempotency_key(
 
     assert resultado == order_original
     assert resultado.id != order_duplicada.id
+
+
+def test_save_with_outbox_allows_same_idempotency_key_for_different_requesters(session_factory):
+    """Regressão: a mesma Idempotency-Key usada por dois solicitantes diferentes deve
+    gerar duas ordens distintas, uma para cada solicitante — a chave de idempotência
+    é escopada por (idempotency_key, requester_id), não apenas pela chave isolada.
+    """
+    repo = SqlAlchemyOrderRepository(session_factory)
+    requester_y = uuid4()
+    requester_z = uuid4()
+
+    order_y = Order.create("key-shared", requester_y, "Description do solicitante Y")
+    repo.save_with_outbox(order_y, OutboxEvent.to_create_order(order_y))
+
+    order_z = Order.create("key-shared", requester_z, "Description do solicitante Z")
+    resultado = repo.save_with_outbox(order_z, OutboxEvent.to_create_order(order_z))
+
+    assert resultado == order_z
+    assert resultado.id != order_y.id
+    assert repo.get_by_idempotency_key("key-shared", requester_y) == order_y
+    assert repo.get_by_idempotency_key("key-shared", requester_z) == order_z

@@ -1,0 +1,17 @@
+databaseChangeLog:
+  - changeSet:
+      id: 003-idempotency-key-composite-unique
+      author: desafio-tecnico
+      comment: >
+        A unicidade da idempotency_key isolada permitia que a mesma chave, usada
+        por dois solicitantes diferentes, retornasse a ordem do primeiro solicitante
+        para o segundo. A idempotência deve ser escopada por solicitante:
+        (idempotency_key, requester_id).
+      changes:
+        - dropUniqueConstraint:
+            tableName: orders
+            constraintName: uk_orders_idempotency_key
+        - addUniqueConstraint:
+            tableName: orders
+            columnNames: idempotency_key, requester_id
+            constraintName: uk_orders_idempotency_key_requester_id

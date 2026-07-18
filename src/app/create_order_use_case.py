@@ -15,7 +15,7 @@ class CreateOrderUseCase:
         self._requester_client = requester_client
 
     def execute(self, idempotency_key: str, requester_id: UUID, description: str) -> Order:
-        existing_order = self._order_repository.get_by_idempotency_key(idempotency_key)
+        existing_order = self._order_repository.get_by_idempotency_key(idempotency_key, requester_id)
         if existing_order is not None:
             logger.info("Idempotent order request, returning existing order_id=%s", existing_order.id)
             return existing_order

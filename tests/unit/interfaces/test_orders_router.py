@@ -93,6 +93,129 @@ def test_create_order_with_unavailable_requester_returns_503():
     assert response.json()["code"] == "REQUESTER_SERVICE_ERROR"
 
 
+def test_create_order_with_malformed_uuid_shorter_returns_422():
+    client = TestClient(app)
+
+    response = client.post(
+        "/py-order-service/orders",
+        json={"requester_id": "3fa85f64-5717-4562-b3fc-2c963f66afa", "description": "Description"},
+        headers={"Idempotency-Key": "key-5"},
+    )
+
+    assert response.status_code == 422
+
+
+def test_create_order_with_malformed_uuid_longer_returns_422():
+    client = TestClient(app)
+
+    response = client.post(
+        "/py-order-service/orders",
+        json={"requester_id": "3fa85f64-5717-4562-b3fc-2c963f66afaaaa", "description": "Description"},
+        headers={"Idempotency-Key": "key-6"},
+    )
+
+    assert response.status_code == 422
+
+
+def test_create_order_with_non_uuid_requester_id_returns_422():
+    client = TestClient(app)
+
+    response = client.post(
+        "/py-order-service/orders",
+        json={"requester_id": "not-a-uuid", "description": "Description"},
+        headers={"Idempotency-Key": "key-7"},
+    )
+
+    assert response.status_code == 422
+
+
+def test_create_order_missing_requester_id_returns_422():
+    client = TestClient(app)
+
+    response = client.post(
+        "/py-order-service/orders",
+        json={"description": "Description"},
+        headers={"Idempotency-Key": "key-8"},
+    )
+
+    assert response.status_code == 422
+
+
+def test_create_order_missing_description_returns_422():
+    client = TestClient(app)
+
+    response = client.post(
+        "/py-order-service/orders",
+        json={"requester_id": str(uuid4())},
+        headers={"Idempotency-Key": "key-9"},
+    )
+
+    assert response.status_code == 422
+
+
+def test_create_order_with_description_exceeding_max_length_returns_422():
+    client = TestClient(app)
+
+    response = client.post(
+        "/py-order-service/orders",
+        json={"requester_id": str(uuid4()), "description": "a" * 1001},
+        headers={"Idempotency-Key": "key-10"},
+    )
+
+    assert response.status_code == 422
+
+
+def test_create_order_with_description_at_max_length_boundary_returns_201():
+    order = Order.create("key-11", uuid4(), "a" * 1000)
+    client = _client_with_use_case(FakeUseCase(result=order))
+
+    response = client.post(
+        "/py-order-service/orders",
+        json={"requester_id": str(order.requester_id), "description": "a" * 1000},
+        headers={"Idempotency-Key": "key-11"},
+    )
+
+    assert response.status_code == 201
+
+
+def test_create_order_with_empty_idempotency_key_returns_422():
+    client = TestClient(app)
+
+    response = client.post(
+        "/py-order-service/orders",
+        json={"requester_id": str(uuid4()), "description": "Description"},
+        headers={"Idempotency-Key": ""},
+    )
+
+    assert response.status_code == 422
+
+
+def test_create_order_with_idempotency_key_exceeding_max_length_returns_422():
+    client = TestClient(app)
+
+    response = client.post(
+        "/py-order-service/orders",
+        json={"requester_id": str(uuid4()), "description": "Description"},
+        headers={"Idempotency-Key": "k" * 256},
+    )
+
+    assert response.status_code == 422
+
+
+def test_create_order_with_idempotency_key_at_max_length_boundary_returns_201():
+    key = "k" * 255
+    order = Order.create(key, uuid4(), "Description")
+    client = _client_with_use_case(FakeUseCase(result=order))
+
+    response = client.post(
+        "/py-order-service/orders",
+        json={"requester_id": str(order.requester_id), "description": "Description"},
+        headers={"Idempotency-Key": key},
+    )
+
+    assert response.status_code == 201
+
+
 def test_health_endpoint():
     client = TestClient(app)
 
