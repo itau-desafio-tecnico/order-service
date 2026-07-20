@@ -21,6 +21,7 @@ class Settings(BaseSettings):
 
     outbox_poll_interval_seconds: float = 2.0
     outbox_max_attempts: int = 5
+    outbox_processing_timeout_seconds: float = 60.0
 
     otel_service_name: str = "order-service"
     otel_exporter_otlp_traces_endpoint: str = "http://localhost:4318/v1/traces"

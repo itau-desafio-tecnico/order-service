@@ -41,6 +41,7 @@ class Order:
 
 class OutboxStatus(str, Enum):
     PENDING = "PENDING"
+    PROCESSING = "PROCESSING"
     PUBLISHED = "PUBLISHED"
     FAILED = "FAILED"
 
@@ -56,6 +57,7 @@ class OutboxEvent:
     attempts: int
     create_at: datetime
     published_at: datetime | None = None
+    claimed_at: datetime | None = None
 
     @staticmethod
     def to_create_order(order: Order) -> "OutboxEvent":

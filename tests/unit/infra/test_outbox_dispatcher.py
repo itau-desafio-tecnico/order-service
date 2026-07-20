@@ -26,7 +26,7 @@ async def test_dispatch_once_publish_and_mark_as_published():
     outbox_repo = MagicMock()
     publisher = MagicMock()
     event = _event_pending()
-    outbox_repo.search_pending.return_value = [event]
+    outbox_repo.claim_pending.return_value = [event]
 
     dispatcher = OutboxDispatcher(outbox_repo, publisher)
     await dispatcher._dispatch_once()
@@ -37,12 +37,24 @@ async def test_dispatch_once_publish_and_mark_as_published():
 
 
 @pytest.mark.asyncio
-async def test_dispatch_once_registra_falha_quando_publish_lanca_erro():
+async def test_dispatch_once_claims_with_the_configured_processing_timeout():
+    outbox_repo = MagicMock()
+    publisher = MagicMock()
+    outbox_repo.claim_pending.return_value = []
+
+    dispatcher = OutboxDispatcher(outbox_repo, publisher, processing_timeout_seconds=90.0)
+    await dispatcher._dispatch_once()
+
+    outbox_repo.claim_pending.assert_called_once_with(limit=20, stale_after_seconds=90.0)
+
+
+@pytest.mark.asyncio
+async def test_dispatch_once_registers_failure_when_publish_raises():
     outbox_repo = MagicMock()
     publisher = MagicMock()
     event = _event_pending()
-    outbox_repo.search_pending.return_value = [event]
-    publisher.publish.side_effect = RuntimeError("SNS indisponível")
+    outbox_repo.claim_pending.return_value = [event]
+    publisher.publish.side_effect = RuntimeError("SNS unavailable")
 
     dispatcher = OutboxDispatcher(outbox_repo, publisher, max_attempts=5)
     await dispatcher._dispatch_once()
@@ -52,10 +64,10 @@ async def test_dispatch_once_registra_falha_quando_publish_lanca_erro():
 
 
 @pytest.mark.asyncio
-async def test_dispatch_once_nao_faz_nada_quando_sem_pendentes():
+async def test_dispatch_once_does_nothing_when_no_pending_events():
     outbox_repo = MagicMock()
     publisher = MagicMock()
-    outbox_repo.search_pending.return_value = []
+    outbox_repo.claim_pending.return_value = []
 
     dispatcher = OutboxDispatcher(outbox_repo, publisher)
     await dispatcher._dispatch_once()
@@ -63,7 +75,7 @@ async def test_dispatch_once_nao_faz_nada_quando_sem_pendentes():
     publisher.publish.assert_not_called()
 
 
-def test_stop_interrompe_o_loop():
+def test_stop_interrupts_the_loop():
     dispatcher = OutboxDispatcher(MagicMock(), MagicMock())
     dispatcher._running = True
 

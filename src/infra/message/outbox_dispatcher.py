@@ -14,11 +14,13 @@ class OutboxDispatcher:
         event_publisher: EventPublisher,
         poll_interval: float = 2.0,
         max_attempts: int = 5,
+        processing_timeout_seconds: float = 60.0,
     ) -> None:
         self._outbox_repository = outbox_repository
         self._event_publisher = event_publisher
         self._poll_interval = poll_interval
         self._max_attempts = max_attempts
+        self._processing_timeout_seconds = processing_timeout_seconds
         self._running = False
 
     async def start(self) -> None:
@@ -33,7 +35,9 @@ class OutboxDispatcher:
         self._running = False
 
     async def _dispatch_once(self) -> None:
-        pending_events = self._outbox_repository.search_pending(limit=20)
+        pending_events = self._outbox_repository.claim_pending(
+            limit=20, stale_after_seconds=self._processing_timeout_seconds
+        )
         for event in pending_events:
             try:
                 self._event_publisher.publish(event)

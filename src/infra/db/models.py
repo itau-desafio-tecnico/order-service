@@ -34,3 +34,4 @@ class OutboxEventModel(Base):
     attempts: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     create_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     published_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    claimed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

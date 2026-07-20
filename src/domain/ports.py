@@ -16,7 +16,7 @@ class OrderRepository(ABC):
 class OutboxRepository(ABC):
 
     @abstractmethod
-    def search_pending(self, limit: int = 20) -> list[OutboxEvent]:
+    def claim_pending(self, limit: int = 20, stale_after_seconds: float = 60.0) -> list[OutboxEvent]:
         ...
 
     @abstractmethod
