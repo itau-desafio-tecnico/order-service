@@ -1,0 +1,26 @@
+databaseChangeLog:
+  - changeSet:
+      id: 004-outbox-events-claimed-at
+      author: desafio-tecnico
+      comment: >
+        Suporta o claim pattern do outbox dispatcher: SELECT ... FOR UPDATE SKIP LOCKED
+        marca eventos como PROCESSING com claimed_at, permitindo que múltiplas tasks
+        (escalabilidade horizontal) dividam o trabalho sem duplicar publicações, e
+        reivindicar eventos presos em PROCESSING além de um timeout configurável.
+      changes:
+        - addColumn:
+            tableName: outbox_events
+            columns:
+              - column:
+                  name: claimed_at
+                  type: timestamp with time zone
+                  constraints:
+                    nullable: true
+        - createIndex:
+            indexName: idx_outbox_events_status_claimed_at
+            tableName: outbox_events
+            columns:
+              - column:
+                  name: status
+              - column:
+                  name: claimed_at

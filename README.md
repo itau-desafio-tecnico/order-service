@@ -23,6 +23,7 @@ Principais garantias de negócio:
 - **Idempotência**: requisições de criação repetidas com o mesmo par `Idempotency-Key` + `requester_id` retornam a ordem já existente, sem revalidar o solicitante nem publicar um novo evento. A mesma chave usada por solicitantes diferentes gera ordens distintas — a chave de idempotência é escopada por solicitante, nunca global.
 - **Consistência**: a ordem e o evento de outbox são persistidos na mesma transação de banco de dados — o evento nunca é perdido mesmo que a publicação no SNS falhe.
 - **Entrega confiável**: um dispatcher em background publica os eventos pendentes no SNS com retry e contagem de tentativas, marcando o evento como `FAILED` após esgotar as tentativas.
+- **Seguro para múltiplas réplicas**: o dispatcher reivindica eventos via `SELECT ... FOR UPDATE SKIP LOCKED`, então rodar mais de uma instância do serviço (escalabilidade horizontal) não duplica publicações no SNS — cada evento é processado por uma única instância por vez.
 
 ## Stack de tecnologia
 
@@ -86,9 +87,11 @@ A direção de dependência aponta sempre para dentro (`infra`/`interfaces` → 
 
 ### Despacho assíncrono do outbox (background task)
 
-- Ao subir, a aplicação inicia uma task assíncrona (`OutboxDispatcher`) que faz polling da tabela `outbox_events` a cada `outbox_poll_interval_seconds` (padrão 2s), buscando até 20 eventos `PENDING` por ciclo.
-- Para cada evento pendente, publica no tópico SNS configurado (`sns_topic_arn`) com atributos de mensagem `event_type`/`event_id`.
-- Em caso de sucesso, marca o evento como `PUBLISHED`. Em caso de falha, incrementa `attempts`; ao atingir `outbox_max_attempts` (padrão 5), marca como `FAILED`.
+- Ao subir, a aplicação inicia uma task assíncrona (`OutboxDispatcher`) que faz polling da tabela `outbox_events` a cada `outbox_poll_interval_seconds` (padrão 2s), reivindicando até 20 eventos por ciclo via `claim_pending`.
+- O claim é atômico: numa única transação curta, seleciona eventos `PENDING` (ou `PROCESSING` presos além de `outbox_processing_timeout_seconds`, padrão 60s) com `SELECT ... FOR UPDATE SKIP LOCKED`, e já marca essas linhas como `PROCESSING` com `claimed_at = now()` antes de liberar o lock. Isso é o que permite rodar múltiplas instâncias do `order-service` (autoscaling) sem que duas instâncias publiquem o mesmo evento: cada uma só enxerga os eventos que a outra ainda não reivindicou, e o lock não fica preso durante a chamada de rede ao SNS.
+- Se uma instância morrer no meio do processamento (ex.: task do ECS substituída em um deploy), o evento fica `PROCESSING` até `outbox_processing_timeout_seconds` expirar — depois disso, qualquer instância (a mesma ou outra) volta a reivindicá-lo no próximo ciclo, evitando perda silenciosa de evento.
+- Para cada evento reivindicado, publica no tópico SNS configurado (`sns_topic_arn`) com atributos de mensagem `event_type`/`event_id`.
+- Em caso de sucesso, marca o evento como `PUBLISHED`. Em caso de falha, incrementa `attempts` e volta o status para `PENDING`; ao atingir `outbox_max_attempts` (padrão 5), marca como `FAILED`.
 - Este serviço **não consome mensagens** — atua apenas como produtor SNS. Não há Kafka/RabbitMQ/SQS neste projeto.
 
 ## Endpoints
@@ -128,6 +131,7 @@ Variáveis de ambiente (ver `src/infra/config.py`):
 | `AWS_REGION` | `sa-east-1` | Região AWS usada pelo cliente SNS |
 | `OUTBOX_POLL_INTERVAL_SECONDS` | `2.0` | Frequência de polling do outbox dispatcher |
 | `OUTBOX_MAX_ATTEMPTS` | `5` | Tentativas máximas de publicação antes de marcar `FAILED` |
+| `OUTBOX_PROCESSING_TIMEOUT_SECONDS` | `60.0` | Tempo até um evento `PROCESSING` "preso" (instância morta no meio do processamento) voltar a ser reivindicável |
 | `OTEL_EXPORTER_OTLP_TRACES_ENDPOINT` | `http://localhost:4318/v1/traces` | Endpoint OTLP para traces |
 | `OTEL_EXPORTER_OTLP_METRICS_ENDPOINT` | `http://localhost:4318/v1/metrics` | Endpoint OTLP para métricas |
 

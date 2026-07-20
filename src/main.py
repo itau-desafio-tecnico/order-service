@@ -40,6 +40,7 @@ _dispatcher = OutboxDispatcher(
     event_publisher=SnsEventPublisher(topic_arn=_settings.sns_topic_arn, region_name=_settings.aws_region),
     poll_interval=_settings.outbox_poll_interval_seconds,
     max_attempts=_settings.outbox_max_attempts,
+    processing_timeout_seconds=_settings.outbox_processing_timeout_seconds,
 )
 
 
