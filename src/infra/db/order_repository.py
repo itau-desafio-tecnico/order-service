@@ -40,6 +40,32 @@ class SqlAlchemyOrderRepository(OrderRepository):
                 else:
                     raise
         
+    def list_all(self, page: int, size: int, status: OrderStatus | None = None) -> tuple[list[Order], int]:
+        with self._session_factory() as session:
+            query = session.query(OrderModel)
+            if status is not None:
+                query = query.filter(OrderModel.status == status.value)
+            total = query.count()
+            models = (
+                query.order_by(OrderModel.created_at.desc())
+                .offset((page - 1) * size)
+                .limit(size)
+                .all()
+            )
+            return [self._to_domain(model) for model in models], total
+
+    def list_by_requester(self, requester_id: UUID, page: int, size: int) -> tuple[list[Order], int]:
+        with self._session_factory() as session:
+            query = session.query(OrderModel).filter(OrderModel.requester_id == requester_id)
+            total = query.count()
+            models = (
+                query.order_by(OrderModel.created_at.desc())
+                .offset((page - 1) * size)
+                .limit(size)
+                .all()
+            )
+            return [self._to_domain(model) for model in models], total
+
     @staticmethod
     def _order_to_model(order: Order) -> OrderModel:
         return OrderModel(

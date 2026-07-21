@@ -1,10 +1,19 @@
 import logging
+from typing import Optional
+from uuid import UUID
 
-from fastapi import APIRouter, Header, status, Depends
+from fastapi import APIRouter, Header, Query, status, Depends
 
-from src.interfaces.api.schemas import CreateOrderRequest, OrderResponse
+from src.domain.entities import OrderStatus
 from src.app.create_order_use_case import CreateOrderUseCase
-from src.interfaces.api.dependencies import get_create_order_use_case
+from src.app.list_orders_use_case import ListOrdersUseCase
+from src.app.list_orders_by_requester_use_case import ListOrdersByRequesterUseCase
+from src.interfaces.api.schemas import CreateOrderRequest, OrderResponse, PaginatedResponse
+from src.interfaces.api.dependencies import (
+    get_create_order_use_case,
+    get_list_orders_use_case,
+    get_list_orders_by_requester_use_case,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -37,3 +46,43 @@ def create_order(
     )
     logger.info("Order processed order_id=%s status=%s", order.id, order.status)
     return OrderResponse.from_domain(order)
+
+
+@router.get("", response_model=PaginatedResponse[OrderResponse])
+def get_all(
+    page: int = Query(1, ge=1, description="Page number (1-based)"),
+    size: int = Query(20, ge=1, le=100, description="Number of items per page"),
+    order_status: Optional[OrderStatus] = Query(None, alias="status", description="Filter by order status"),
+    use_case: ListOrdersUseCase = Depends(get_list_orders_use_case),
+) -> PaginatedResponse[OrderResponse]:
+    """
+    List all orders, paginated and optionally filtered by status.
+    """
+    logger.info("Listing orders page=%s size=%s status=%s", page, size, order_status)
+    orders, total = use_case.execute(page=page, size=size, status=order_status)
+    return PaginatedResponse.create(
+        items=[OrderResponse.from_domain(order) for order in orders],
+        page=page,
+        size=size,
+        total=total,
+    )
+
+
+@router.get("/requester/{requester_id}", response_model=PaginatedResponse[OrderResponse])
+def get_by_requester_id(
+    requester_id: UUID,
+    page: int = Query(1, ge=1, description="Page number (1-based)"),
+    size: int = Query(20, ge=1, le=100, description="Number of items per page"),
+    use_case: ListOrdersByRequesterUseCase = Depends(get_list_orders_by_requester_use_case),
+) -> PaginatedResponse[OrderResponse]:
+    """
+    List all orders created by a given requester, paginated.
+    """
+    logger.info("Listing orders requester_id=%s page=%s size=%s", requester_id, page, size)
+    orders, total = use_case.execute(requester_id=requester_id, page=page, size=size)
+    return PaginatedResponse.create(
+        items=[OrderResponse.from_domain(order) for order in orders],
+        page=page,
+        size=size,
+        total=total,
+    )

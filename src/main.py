@@ -11,6 +11,7 @@ from src.infra.message.outbox_dispatcher import OutboxDispatcher
 from src.infra.message.sns_publisher import SnsEventPublisher
 from src.infra.telemetry import setup_telemetry
 from src.interfaces.api.routers.orders import router as orders_router
+from src.interfaces.api.routers.outbox_events import router as outbox_events_router
 from src.interfaces.api.error_handlers import register_exception_handlers
 
 
@@ -67,6 +68,7 @@ register_exception_handlers(app)
 
 _root_router = APIRouter(prefix=_prefix)
 _root_router.include_router(orders_router)
+_root_router.include_router(outbox_events_router)
 
 
 @_root_router.get("/health")

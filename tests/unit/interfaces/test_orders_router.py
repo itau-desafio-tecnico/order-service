@@ -2,9 +2,13 @@ from uuid import uuid4
 
 from fastapi.testclient import TestClient
 
-from src.domain.entities import Order
+from src.domain.entities import Order, OrderStatus
 from src.domain.exceptions import RequesterServiceError, RequesterNotFoundError
-from src.interfaces.api.dependencies import get_create_order_use_case
+from src.interfaces.api.dependencies import (
+    get_create_order_use_case,
+    get_list_orders_use_case,
+    get_list_orders_by_requester_use_case,
+)
 from src.main import app
 
 
@@ -19,8 +23,40 @@ class FakeUseCase:
         return self._result
 
 
+class FakeListOrdersUseCase:
+    def __init__(self, items=None, total=0):
+        self._items = items or []
+        self._total = total
+        self.last_call = None
+
+    def execute(self, page, size, status=None):
+        self.last_call = ("execute", page, size, status)
+        return self._items, self._total
+
+
+class FakeListOrdersByRequesterUseCase:
+    def __init__(self, items=None, total=0):
+        self._items = items or []
+        self._total = total
+        self.last_call = None
+
+    def execute(self, requester_id, page, size):
+        self.last_call = ("execute", requester_id, page, size)
+        return self._items, self._total
+
+
 def _client_with_use_case(fake_use_case) -> TestClient:
     app.dependency_overrides[get_create_order_use_case] = lambda: fake_use_case
+    return TestClient(app)
+
+
+def _client_with_list_orders_use_case(fake_use_case) -> TestClient:
+    app.dependency_overrides[get_list_orders_use_case] = lambda: fake_use_case
+    return TestClient(app)
+
+
+def _client_with_list_orders_by_requester_use_case(fake_use_case) -> TestClient:
+    app.dependency_overrides[get_list_orders_by_requester_use_case] = lambda: fake_use_case
     return TestClient(app)
 
 
@@ -223,3 +259,103 @@ def test_health_endpoint():
 
     assert response.status_code == 200
     assert response.json() == {"status": "ok"}
+
+
+def test_get_all_orders_returns_paginated_list():
+    order = Order.create("key-1", uuid4(), "Description")
+    use_case = FakeListOrdersUseCase(items=[order], total=1)
+    client = _client_with_list_orders_use_case(use_case)
+
+    response = client.get("/py-order-service/orders", params={"page": 1, "size": 10})
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["total"] == 1
+    assert body["page"] == 1
+    assert body["size"] == 10
+    assert body["total_pages"] == 1
+    assert body["items"][0]["order_number"] == order.order_number
+    assert use_case.last_call == ("execute", 1, 10, None)
+
+
+def test_get_all_orders_uses_default_pagination():
+    use_case = FakeListOrdersUseCase(items=[], total=0)
+    client = _client_with_list_orders_use_case(use_case)
+
+    response = client.get("/py-order-service/orders")
+
+    assert response.status_code == 200
+    assert use_case.last_call == ("execute", 1, 20, None)
+
+
+def test_get_all_orders_filters_by_status():
+    use_case = FakeListOrdersUseCase(items=[], total=0)
+    client = _client_with_list_orders_use_case(use_case)
+
+    response = client.get("/py-order-service/orders", params={"status": "CREATED"})
+
+    assert response.status_code == 200
+    assert use_case.last_call == ("execute", 1, 20, OrderStatus.CREATED)
+
+
+def test_get_all_orders_with_invalid_status_returns_422():
+    use_case = FakeListOrdersUseCase()
+    client = _client_with_list_orders_use_case(use_case)
+
+    response = client.get("/py-order-service/orders", params={"status": "NOT_A_STATUS"})
+
+    assert response.status_code == 422
+
+
+def test_get_all_orders_with_invalid_page_returns_422():
+    use_case = FakeListOrdersUseCase()
+    client = _client_with_list_orders_use_case(use_case)
+
+    response = client.get("/py-order-service/orders", params={"page": 0})
+
+    assert response.status_code == 422
+
+
+def test_get_all_orders_with_size_above_limit_returns_422():
+    use_case = FakeListOrdersUseCase()
+    client = _client_with_list_orders_use_case(use_case)
+
+    response = client.get("/py-order-service/orders", params={"size": 101})
+
+    assert response.status_code == 422
+
+
+def test_get_orders_by_requester_id_returns_paginated_list():
+    requester_id = uuid4()
+    order = Order.create("key-1", requester_id, "Description")
+    use_case = FakeListOrdersByRequesterUseCase(items=[order], total=1)
+    client = _client_with_list_orders_by_requester_use_case(use_case)
+
+    response = client.get(f"/py-order-service/orders/requester/{requester_id}")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["total"] == 1
+    assert body["items"][0]["order_number"] == order.order_number
+    assert use_case.last_call == ("execute", requester_id, 1, 20)
+
+
+def test_get_orders_by_requester_id_with_invalid_uuid_returns_422():
+    use_case = FakeListOrdersByRequesterUseCase()
+    client = _client_with_list_orders_by_requester_use_case(use_case)
+
+    response = client.get("/py-order-service/orders/requester/not-a-uuid")
+
+    assert response.status_code == 422
+
+
+def test_get_orders_by_requester_id_returns_empty_list_when_no_orders():
+    use_case = FakeListOrdersByRequesterUseCase(items=[], total=0)
+    client = _client_with_list_orders_by_requester_use_case(use_case)
+
+    response = client.get(f"/py-order-service/orders/requester/{uuid4()}")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["items"] == []
+    assert body["total"] == 0
