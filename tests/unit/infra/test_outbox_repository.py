@@ -100,3 +100,70 @@ def test_fail_registry_ignores_nonexistent_event(session_factory):
     outbox_repo = SqlAlchemyOutboxRepository(session_factory)
 
     outbox_repo.fail_registry(uuid4(), max_attempts=3)
+
+
+def test_list_all_returns_paginated_events(session_factory):
+    outbox_repo = SqlAlchemyOutboxRepository(session_factory)
+    for _ in range(3):
+        _create_pending_event(session_factory)
+
+    items, total = outbox_repo.list_all(page=1, size=2)
+
+    assert total == 3
+    assert len(items) == 2
+
+
+def test_list_all_second_page_returns_remaining_items(session_factory):
+    outbox_repo = SqlAlchemyOutboxRepository(session_factory)
+    for _ in range(3):
+        _create_pending_event(session_factory)
+
+    items, total = outbox_repo.list_all(page=2, size=2)
+
+    assert total == 3
+    assert len(items) == 1
+
+
+def test_list_all_filters_by_status(session_factory):
+    outbox_repo = SqlAlchemyOutboxRepository(session_factory)
+    published_event = _create_pending_event(session_factory)
+    outbox_repo.mark_as_published(published_event.id)
+    _create_pending_event(session_factory)
+
+    published_items, published_total = outbox_repo.list_all(page=1, size=10, status=OutboxStatus.PUBLISHED)
+    pending_items, pending_total = outbox_repo.list_all(page=1, size=10, status=OutboxStatus.PENDING)
+
+    assert published_total == 1
+    assert published_items[0].id == published_event.id
+    assert pending_total == 1
+
+
+def test_list_all_filters_by_created_at_range(session_factory):
+    outbox_repo = SqlAlchemyOutboxRepository(session_factory)
+    event = _create_pending_event(session_factory)
+
+    within_range, total_within = outbox_repo.list_all(
+        page=1,
+        size=10,
+        created_from=event.create_at - timedelta(seconds=5),
+        created_to=event.create_at + timedelta(seconds=5),
+    )
+    outside_range, total_outside = outbox_repo.list_all(
+        page=1,
+        size=10,
+        created_from=event.create_at + timedelta(seconds=10),
+    )
+
+    assert total_within == 1
+    assert within_range[0].id == event.id
+    assert total_outside == 0
+    assert outside_range == []
+
+
+def test_list_all_returns_empty_when_no_events(session_factory):
+    outbox_repo = SqlAlchemyOutboxRepository(session_factory)
+
+    items, total = outbox_repo.list_all(page=1, size=10)
+
+    assert items == []
+    assert total == 0

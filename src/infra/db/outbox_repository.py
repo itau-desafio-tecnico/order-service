@@ -66,6 +66,31 @@ class SqlAlchemyOutboxRepository(OutboxRepository):
                 model.claimed_at = None
             session.commit()
 
+    def list_all(
+        self,
+        page: int,
+        size: int,
+        status: OutboxStatus | None = None,
+        created_from: datetime | None = None,
+        created_to: datetime | None = None,
+    ) -> tuple[list[OutboxEvent], int]:
+        with self._session_factory() as session:
+            query = session.query(OutboxEventModel)
+            if status is not None:
+                query = query.filter(OutboxEventModel.status == status.value)
+            if created_from is not None:
+                query = query.filter(OutboxEventModel.create_at >= created_from)
+            if created_to is not None:
+                query = query.filter(OutboxEventModel.create_at <= created_to)
+            total = query.count()
+            models = (
+                query.order_by(OutboxEventModel.create_at.desc())
+                .offset((page - 1) * size)
+                .limit(size)
+                .all()
+            )
+            return [self._to_domain(model) for model in models], total
+
     @staticmethod
     def _to_domain(model: OutboxEventModel) -> OutboxEvent:
         return OutboxEvent(
